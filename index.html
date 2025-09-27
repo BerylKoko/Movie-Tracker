@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Movie Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Movie Explorer - Home</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,7 +11,7 @@
     <nav class="nav">
       <div class="brand">Movie Explorer</div>
       <ul class="nav-links">
-        <li><a href="index.html">Home</a></li>
+        <li><a href="index.html" class="active">Home</a></li>
         <li><a href="explore.html">Explore</a></li>
         <li><a href="collection.html">Collection</a></li>
         <li><a href="about.html">About</a></li>
@@ -20,41 +20,25 @@
   </header>
 
   <main>
-    <!-- Hero / Slideshow -->
-    <section id="hero">
-      <h2 class="section-title">Trending Now</h2>
-      <div class="slideshow-wrapper">
-        <button class="slide-btn left" id="prev" aria-label="previous slide">&#10094;</button>
-        <div id="slideshow" class="slideshow"></div>
-        <button class="slide-btn right" id="next" aria-label="next slide">&#10095;</button>
-      </div>
-    </section>
+    <!-- Section Title -->
+    <h2 class="section-title">Trending Movies</h2>
 
-    <!-- Search -->
-    <section id="search">
-      <input id="movie-search" type="search" placeholder="Search movies, e.g. Inception" />
-      <button id="search-btn">Search</button>
-    </section>
-
-    <!-- Grid -->
+    <!-- Movie Grid -->
     <section id="movie-grid" class="movie-grid" aria-live="polite">
-      <!-- Filled by JS -->
+      <!-- Movies loaded dynamically -->
     </section>
   </main>
 
-  <!-- Movie Detail Modal -->
-  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+  <!-- Modal -->
+  <div id="modal" class="modal hidden">
     <div class="modal-card">
-      <button id="modal-close" class="modal-close" aria-label="Close">✕</button>
-      <div id="modal-content">
-        <!-- Filled dynamically -->
-      </div>
+      <button id="modal-close" class="modal-close">✕</button>
+      <div id="modal-content"></div>
       <div id="similar-section">
         <h3>Recommendations</h3>
         <div id="similar-grid" class="movie-grid small-grid"></div>
       </div>
     </div>
-    <div id="modal-backdrop" class="modal-backdrop"></div>
   </div>
 
   <script src="script.js"></script>

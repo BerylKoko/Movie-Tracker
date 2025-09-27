@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Explore — Movie Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Movie Explorer - Explore</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
       <div class="brand">Movie Explorer</div>
       <ul class="nav-links">
         <li><a href="index.html">Home</a></li>
-        <li><a href="explore.html">Explore</a></li>
+        <li><a href="explore.html" class="active">Explore</a></li>
         <li><a href="collection.html">Collection</a></li>
         <li><a href="about.html">About</a></li>
       </ul>
@@ -20,85 +20,26 @@
   </header>
 
   <main>
-    <section class="explore-top">
-      <h2 class="section-title">Explore by Genre</h2>
-      <div id="genre-list" class="genre-list">
-        <!-- clickable genre buttons inserted here by JS fallback if needed -->
-      </div>
-    </section>
+    <h2 class="section-title">Explore by Genre</h2>
+    <div class="genre-buttons">
+      <button class="genre-btn" data-genre="Action">Action</button>
+      <button class="genre-btn" data-genre="Comedy">Comedy</button>
+      <button class="genre-btn" data-genre="Romance">Romance</button>
+      <button class="genre-btn" data-genre="Horror">Horror</button>
+      <button class="genre-btn" data-genre="Sci-Fi">Sci-Fi</button>
+    </div>
 
-    <section id="genre-grid" class="movie-grid">
-      <!-- Genre movies load here -->
-    </section>
+    <section id="explore-grid" class="movie-grid" aria-live="polite"></section>
   </main>
+<div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <button id="modal-close" class="modal-close">✕</button>
+      <div id="modal-content"></div>
+      <h3>Recommendations</h3>
+      <div id="similar-grid" class="movie-grid small-grid"></div>
+    </div>
+  </div>
 
-  <script>
-  // Inline small script to handle genre param and UI.
-  (function(){
-    const API_KEY = '7047dd1';
-    const genres = ['Action','Comedy','Drama','Romance','Thriller','Animation','Horror','Sci-Fi','Fantasy'];
-    const genreList = document.getElementById('genre-list');
-    const genreGrid = document.getElementById('genre-grid');
-
-    // render clickable genre buttons
-    genres.forEach(g=>{
-      const btn = document.createElement('button');
-      btn.className = 'genre-btn';
-      btn.textContent = g;
-      btn.onclick = ()=> loadGenre(g);
-      genreList.appendChild(btn);
-    });
-
-    // load genre via query param ?genre=Action
-    const params = new URLSearchParams(location.search);
-    const selected = params.get('genre');
-    if(selected) loadGenre(selected);
-
-    async function loadGenre(genre){
-      document.title = `${genre} — Movie Explorer`;
-      genreGrid.innerHTML = `<p class="loading">Loading ${genre} movies…</p>`;
-      try{
-        const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(genre)}&type=movie&apikey=${API_KEY}`);
-        const data = await res.json();
-        if(data.Response === "True"){
-          genreGrid.innerHTML = "";
-          data.Search.forEach(m=>{
-            const card = createCard(m);
-            genreGrid.appendChild(card);
-          });
-        } else {
-          genreGrid.innerHTML = `<p class="no-results">No results for ${genre}</p>`;
-        }
-      }catch(e){
-        genreGrid.innerHTML = `<p class="no-results">Error loading genre</p>`;
-      }
-    }
-
-    function createCard(movie){
-      const div = document.createElement('div');
-      div.className = 'movie-card';
-      div.setAttribute('data-imdbid', movie.imdbID);
-      div.innerHTML = `
-        <img src="${movie.Poster !== 'N/A' ? movie.Poster : 'movieposter.jpg'}" alt="${movie.Title}">
-        <div class="info">
-          <h4>${movie.Title}</h4>
-          <p>${movie.Year}</p>
-        </div>
-      `;
-      div.addEventListener('click', ()=> window.location = `index.html#detail-${movie.imdbID}`);
-      return div;
-    }
-
-    // if page loaded with anchor #detail-tt123 add anchor-handling
-    if(location.hash.startsWith('#detail-')){
-      const imdb = location.hash.split('-')[1];
-      if(imdb){
-        // open index modal by navigating back to index with hash - simpler: open detail in place
-        loadGenre(''); // ensure page has something
-        // we won't auto-open modal on explore; users click posters
-      }
-    }
-  })();
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>

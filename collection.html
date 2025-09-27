@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Collection — Movie Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Collection</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,7 +13,7 @@
       <ul class="nav-links">
         <li><a href="index.html">Home</a></li>
         <li><a href="explore.html">Explore</a></li>
-        <li><a href="collection.html">Collection</a></li>
+        <li><a href="collection.html" class="active">Collection</a></li>
         <li><a href="about.html">About</a></li>
       </ul>
     </nav>
@@ -21,27 +21,31 @@
 
   <main>
     <h2 class="section-title">My Collection</h2>
-    <div id="collection-grid" class="movie-grid"></div>
+    <section id="collection-grid" class="movie-grid" aria-live="polite"></section>
   </main>
 
+  <!-- Modal (same as home/explore) -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <button id="modal-close" class="modal-close">✕</button>
+      <div id="modal-content"></div>
+      <div id="similar-section">
+        <h3>Recommendations</h3>
+        <div id="similar-grid" class="movie-grid small-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
   <script>
-  // load saved movies from localStorage and render clickable cards (open index detail)
-  (function(){
-    const saved = JSON.parse(localStorage.getItem('savedMovies') || '[]');
-    const grid = document.getElementById('collection-grid');
-    if(!saved.length) grid.innerHTML = '<p class="no-results">No saved movies yet. Save movies from the search or detail modal.</p>';
-    saved.forEach(movie=>{
-      const card = document.createElement('div');
-      card.className = 'movie-card';
-      card.dataset.imdbid = movie.imdbID;
-      card.innerHTML = `
-        <img src="${movie.Poster && movie.Poster!=='N/A' ? movie.Poster : 'movieposter.jpg'}" alt="${movie.Title}">
-        <div class="info"><h4>${movie.Title}</h4><p>${movie.Year}</p></div>
-      `;
-      card.addEventListener('click', ()=> window.location = `index.html#detail-${movie.imdbID}`);
-      grid.appendChild(card);
-    });
-  })();
+    const collectionGrid = document.getElementById("collection-grid");
+
+    function loadCollection() {
+      const collection = JSON.parse(localStorage.getItem("myCollection") || "[]");
+      renderMovies(collection, collectionGrid); // reuse your renderMovies function
+    }
+
+    document.addEventListener("DOMContentLoaded", loadCollection);
   </script>
 </body>
 </html>

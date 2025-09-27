@@ -1,205 +1,316 @@
-/* script.js - main site logic */
-const API_KEY = '7047dd1';
-let slidesData = [];
-let currentSlide = 0;
-let slideInterval;
+// =======================
+// CONFIG
+// =======================
+const API_KEY = "7047dd1";
+const API_URL = `https://www.omdbapi.com/?apikey=${API_KEY}`;
+const PLACEHOLDER = "movieposter.jpg";
 
-document.addEventListener('DOMContentLoaded', () => {
-  initUI();
-  fetchTrending();
-  setupSearch();
-  handleHashOpen(); // if user navigated with #detail-tt...
-});
+// =======================
+// DOM ELEMENTS
+// =======================
+const movieGrid = document.getElementById("movie-grid");
+const exploreGrid = document.getElementById("explore-grid");
+const searchInput = document.getElementById("movie-search");
+const searchBtn = document.getElementById("search-btn");
+const slideshow = document.getElementById("slideshow");
+const prevBtn = document.getElementById("prev");
+const nextBtn = document.getElementById("next");
+const modal = document.getElementById("modal");
+const modalContent = document.getElementById("modal-content");
+const modalClose = document.getElementById("modal-close");
+const similarGrid = document.getElementById("similar-grid");
+const genreBtns = document.querySelectorAll(".genre-btn");
 
-function initUI(){
-  document.getElementById('next').addEventListener('click', ()=>{ nextSlide(); resetAuto(); });
-  document.getElementById('prev').addEventListener('click', ()=>{ prevSlide(); resetAuto(); });
-  // modal close
-  document.getElementById('modal-close').addEventListener('click', closeModal);
-  document.getElementById('modal-backdrop').addEventListener('click', closeModal);
-}
-
-// --- Trending / slideshow ---
-async function fetchTrending(){
-  const queries = ['Avengers','Spider-Man','Dune','Barbie','Oppenheimer','Matrix','Mission','Star Wars'];
-  let all = [];
-  for(const q of queries){
-    try{
-      const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(q)}&type=movie&apikey=${API_KEY}`);
-      const data = await res.json();
-      if(data.Response === "True") all = all.concat(data.Search);
-    }catch(e){ console.error(e); }
-  }
-  // dedupe by imdbID
-  const map = new Map();
-  all.forEach(m=> map.set(m.imdbID, m));
-  all = Array.from(map.values());
-  if(all.length === 0) return;
-  // group into slides of 1 large poster per slide for nicer display
-  slidesData = all.map(m => [m]); // one item per slide
-  renderSlide(0);
-  slideInterval = setInterval(nextSlide, 5000);
-  // show a default grid of trending items
-  displayMovies(all.slice(0, 24));
-}
-
-function renderSlide(idx){
-  currentSlide = idx;
-  const container = document.getElementById('slideshow');
-  container.innerHTML = '';
-  const movies = slidesData[idx] || [];
-  // create one slide per movie (here only one)
-  movies.forEach(m=>{
-    const slide = document.createElement('div');
-    slide.className = 'slide';
-    slide.innerHTML = `
-      <img src="${m.Poster !== 'N/A' ? m.Poster : 'movieposter.jpg'}" alt="${escapeHtml(m.Title)}">
-      <div class="caption">${escapeHtml(m.Title)} (${m.Year})</div>
-    `;
-    // clicking slide opens details
-    slide.addEventListener('click', ()=> openDetail(m.imdbID));
-    container.appendChild(slide);
-  });
-}
-
-function nextSlide(){ if(!slidesData.length) return; renderSlide((currentSlide+1) % slidesData.length); }
-function prevSlide(){ if(!slidesData.length) return; renderSlide((currentSlide-1 + slidesData.length) % slidesData.length); }
-function resetAuto(){ clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 5000); }
-
-// --- Search & display ---
-function setupSearch(){
-  document.getElementById('search-btn').addEventListener('click', ()=> {
-    const q = document.getElementById('movie-search').value.trim();
-    if(q) searchAndDisplay(q);
-  });
-  document.getElementById('movie-search').addEventListener('keypress', e=>{
-    if(e.key === 'Enter'){ const q = e.target.value.trim(); if(q) searchAndDisplay(q); }
-  });
-}
-
-async function searchAndDisplay(q){
-  const grid = document.getElementById('movie-grid');
-  grid.innerHTML = `<p class="loading">Searching for "${escapeHtml(q)}"…</p>`;
-  try{
-    const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(q)}&type=movie&apikey=${API_KEY}`);
+// =======================
+// FETCH HELPERS
+// =======================
+async function fetchMovies(search, page = 1) {
+  try {
+    const res = await fetch(`${API_URL}&s=${encodeURIComponent(search)}&type=movie&page=${page}`);
     const data = await res.json();
-    if(data.Response === "True"){
-      displayMovies(data.Search);
-    } else {
-      grid.innerHTML = `<p class="no-results">No results for "${escapeHtml(q)}"</p>`;
-    }
-  }catch(e){
-    grid.innerHTML = `<p class="no-results">Error fetching results</p>`;
+    return data.Search || [];
+  } catch (err) {
+    console.error("Error fetching movies:", err);
+    return [];
   }
 }
 
-function displayMovies(movies){
-  const grid = document.getElementById('movie-grid');
-  grid.innerHTML = '';
-  movies.forEach(m=>{
-    const card = document.createElement('div');
-    card.className = 'movie-card';
-    card.dataset.imdbid = m.imdbID;
+async function fetchMovieById(id) {
+  try {
+    const res = await fetch(`${API_URL}&i=${id}&plot=full`);
+    return await res.json();
+  } catch (err) {
+    console.error("Error fetching movie:", err);
+    return null;
+  }
+}
+
+// =======================
+// RENDER MOVIES
+// =======================
+function renderMovies(movies, container) {
+  if (!container) return;
+  container.innerHTML = "";
+  movies.forEach(movie => {
+    const poster = movie.Poster && movie.Poster !== "N/A" ? movie.Poster : PLACEHOLDER;
+    const card = document.createElement("div");
+    card.className = "movie-card";
     card.innerHTML = `
-      <img src="${m.Poster !== 'N/A' ? m.Poster : 'movieposter.jpg'}" alt="${escapeHtml(m.Title)}">
-      <div class="info"><h3>${escapeHtml(m.Title)}</h3><p>${m.Year}</p></div>
+      <img src="${poster}" alt="${movie.Title}" />
+      <h3>${movie.Title}</h3>
+      <p>${movie.Year}</p>
     `;
-    card.addEventListener('click', ()=> openDetail(m.imdbID));
-    grid.appendChild(card);
+    card.addEventListener("click", () => showMovieDetail(movie.imdbID));
+    container.appendChild(card);
   });
 }
 
-// --- Detail modal / recommendations ---
-async function openDetail(imdbID){
-  // push hash so other pages can link back
-  history.replaceState(null, '', `#detail-${imdbID}`);
-  const modal = document.getElementById('modal');
-  const content = document.getElementById('modal-content');
-  const simGrid = document.getElementById('similar-grid');
-  content.innerHTML = `<p class="loading">Loading...</p>`;
-  simGrid.innerHTML = '';
-  modal.classList.remove('hidden');
+// =======================
+// SEARCH FUNCTION
+// =======================
+async function handleSearch() {
+  const query = searchInput.value.trim();
+  if (!query) return;
+  let results = [];
+  for (let page = 1; page <= 3; page++) {
+    const movies = await fetchMovies(query, page);
+    results = results.concat(movies);
+  }
+  renderMovies(results, movieGrid);
+}
 
-  try{
-    const res = await fetch(`https://www.omdbapi.com/?i=${imdbID}&plot=full&apikey=${API_KEY}`);
-    const data = await res.json();
-    if(data.Response !== "True"){ content.innerHTML = `<p class="no-results">Movie not found</p>`; return; }
+if (searchBtn) searchBtn.addEventListener("click", handleSearch);
 
-    // fill modal content
-    content.innerHTML = `
-      <img src="${data.Poster !== 'N/A' ? data.Poster : 'movieposter.jpg'}" alt="${escapeHtml(data.Title)}">
-      <div class="meta">
-        <h2>${escapeHtml(data.Title)} <span style="font-weight:400;color:var(--muted)">(${data.Year})</span></h2>
-        <p><strong>Rating:</strong> ${data.imdbRating && data.imdbRating!=='N/A' ? data.imdbRating : 'N/A' } / 10</p>
-        <p><strong>Genre:</strong> ${escapeHtml(data.Genre)}</p>
-        <p><strong>Runtime:</strong> ${escapeHtml(data.Runtime)}</p>
-        <p><strong>Director:</strong> ${escapeHtml(data.Director)}</p>
-        <p><strong>Actors:</strong> ${escapeHtml(data.Actors)}</p>
-        <p style="margin-top:10px">${escapeHtml(data.Plot)}</p>
-        <div style="margin-top:12px">
-          <button id="save-btn" class="save-btn">Save to Collection</button>
-        </div>
+// =======================
+// SLIDESHOW (HOME)
+// =======================
+let slides = [];
+let slideIndex = 0;
+async function loadSlideshow() {
+  let trending = await fetchMovies("Avengers");
+  trending = trending.concat(await fetchMovies("Batman"));
+  slides = trending.slice(0, 10);
+  renderSlideshow();
+  setInterval(() => changeSlide(1), 5000);
+}
+
+function renderSlideshow() {
+  if (!slideshow) return;
+  slideshow.innerHTML = "";
+  slides.forEach((movie, i) => {
+    const poster = movie.Poster && movie.Poster !== "N/A" ? movie.Poster : PLACEHOLDER;
+    const slide = document.createElement("div");
+    slide.className = "slide";
+    slide.style.display = i === slideIndex ? "flex" : "none";
+    slide.innerHTML = `<img src="${poster}" alt="${movie.Title}" />`;
+    slide.addEventListener("click", () => showMovieDetail(movie.imdbID));
+    slideshow.appendChild(slide);
+  });
+}
+
+function changeSlide(n) {
+  slideIndex = (slideIndex + n + slides.length) % slides.length;
+  renderSlideshow();
+}
+
+if (prevBtn) prevBtn.addEventListener("click", () => changeSlide(-1));
+if (nextBtn) nextBtn.addEventListener("click", () => changeSlide(1));
+
+// =======================
+// MODAL
+// =======================
+async function showMovieDetail(id) {
+  const movie = await fetchMovieById(id);
+  if (!movie) return;
+
+  modalContent.innerHTML = `
+    <div class="modal-content-wrapper">
+      <img src="${movie.Poster !== "N/A" ? movie.Poster : PLACEHOLDER}" alt="${movie.Title}" />
+      <div class="modal-info">
+        <h2>${movie.Title} (${movie.Year})</h2>
+        <p><strong>Rating:</strong> ${movie.imdbRating}</p>
+        <p>${movie.Plot}</p>
+        <button id="add-to-collection">Add to Collection</button>
       </div>
-    `;
+    </div>
+  `;
 
-    // save button behaviour
-    document.getElementById('save-btn').addEventListener('click', ()=>{
-      saveToCollection({
-        imdbID: data.imdbID,
-        Title: data.Title,
-        Year: data.Year,
-        Poster: data.Poster
-      });
-      document.getElementById('save-btn').textContent = 'Saved ✓';
-      setTimeout(()=> document.getElementById('save-btn').textContent = 'Save to Collection', 1200);
-    });
+  // recommendations
+  let recs = [];
+  if (movie.Genre) {
+    recs = await fetchMovies(movie.Genre.split(",")[0]);
+    recs = recs.filter(m => m.imdbID !== id).slice(0, 6);
+  }
+  renderMovies(recs, similarGrid);
 
-    // recommendations: pick first genre and search OMDb for it
-    const primaryGenre = data.Genre ? data.Genre.split(',')[0].trim() : null;
-    if(primaryGenre){
-      const recRes = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(primaryGenre)}&type=movie&apikey=${API_KEY}`);
-      const recData = await recRes.json();
-      if(recData.Response === "True"){
-        simGrid.innerHTML = '';
-        // show up to 8 recommendations excluding current movie
-        recData.Search.filter(x => x.imdbID !== imdbID).slice(0,8).forEach(m=>{
-          const card = document.createElement('div');
-          card.className = 'movie-card';
-          card.innerHTML = `<img src="${m.Poster !== 'N/A' ? m.Poster : 'movieposter.jpg'}" alt="${escapeHtml(m.Title)}"><div class="info"><h4>${escapeHtml(m.Title)}</h4><p>${m.Year}</p></div>`;
-          card.addEventListener('click', ()=> openDetail(m.imdbID));
-          simGrid.appendChild(card);
-        });
-      } else {
-        simGrid.innerHTML = '<p class="no-results">No recommendations found</p>';
+  // Show modal
+  modal.classList.remove("hidden");
+
+  // LOCK PAGE SCROLL
+  document.body.style.overflow = "hidden";
+
+  // Make modal itself scrollable
+  const modalCard = modal.querySelector(".modal-card");
+  modalCard.style.overflowY = "auto";
+  modalCard.style.maxHeight = "90vh"; // keeps it card-sized
+
+  // =======================
+  // Add to Collection button
+  // =======================
+  const addBtn = document.getElementById("add-to-collection");
+  addBtn.addEventListener("click", () => {
+    let collection = JSON.parse(localStorage.getItem("myCollection") || "[]");
+    if (!collection.find(m => m.imdbID === movie.imdbID)) {
+      collection.push(movie);
+      localStorage.setItem("myCollection", JSON.stringify(collection));
+      alert(`${movie.Title} added to your collection!`);
+    } else {
+      alert(`${movie.Title} is already in your collection.`);
+    }
+  });
+}
+function addToCollection(movie) {
+  let collection = JSON.parse(localStorage.getItem("myCollection") || "[]");
+
+  if (!collection.some(m => m.imdbID === movie.imdbID)) {
+    collection.push(movie);
+    localStorage.setItem("myCollection", JSON.stringify(collection));
+  }
+
+  // Add green checkmark on left of button
+  const btn = document.getElementById("add-collection-btn");
+  if (btn && !btn.querySelector(".checkmark")) {
+    const check = document.createElement("span");
+    check.className = "checkmark";
+    check.textContent = "✔";           // the checkmark
+    check.style.color = "green";       // green color
+    check.style.marginRight = "0.5rem";
+    btn.prepend(check);                // put checkmark on the left
+    btn.disabled = true;               // optional: prevent re-click
+  }
+}
+
+// =======================
+// MODAL BUTTON
+// =======================
+async function showMovieDetail(id) {
+  const movie = await fetchMovieById(id);
+  if (!movie) return;
+
+  modalContent.innerHTML = `
+    <div class="modal-content-wrapper">
+      <img src="${movie.Poster !== "N/A" ? movie.Poster : PLACEHOLDER}" alt="${movie.Title}" />
+      <div class="modal-info">
+        <h2>${movie.Title} (${movie.Year})</h2>
+        <p><strong>Rating:</strong> ${movie.imdbRating}</p>
+        <p>${movie.Plot}</p>
+        <button id="add-collection-btn" style="padding-left:2rem; position:relative; cursor:pointer;">Add to Collection</button>
+      </div>
+    </div>
+  `;
+
+  // Attach event to button
+  const addBtn = document.getElementById("add-collection-btn");
+  if (addBtn) {
+    // Initialize collection
+    let collection = JSON.parse(localStorage.getItem("collection")) || [];
+
+    function updateButton() {
+      addBtn.innerHTML = ""; // Clear button
+      const isInCollection = collection.some(m => m.imdbID === movie.imdbID);
+      addBtn.textContent = isInCollection ? "Remove from Collection" : "Add to Collection";
+      if (isInCollection) {
+        const check = document.createElement("span");
+        check.textContent = "✔";
+        check.style.position = "absolute";
+        check.style.left = "0.5rem";
+        check.style.color = "green";
+        addBtn.appendChild(check);
       }
     }
 
-  }catch(e){
-    content.innerHTML = `<p class="no-results">Error loading details</p>`;
+    addBtn.addEventListener("click", () => {
+      const exists = collection.some(m => m.imdbID === movie.imdbID);
+      if (exists) {
+        collection = collection.filter(m => m.imdbID !== movie.imdbID); // Remove
+      } else {
+        collection.push(movie); // Add
+      }
+      localStorage.setItem("collection", JSON.stringify(collection));
+      updateButton();
+    });
+
+    updateButton(); // Set initial state
   }
-}
 
-function closeModal(){
-  document.getElementById('modal').classList.add('hidden');
-  history.replaceState(null,'', location.pathname); // remove hash
-}
-
-// --- collection save/load ---
-function saveToCollection(movie){
-  const saved = JSON.parse(localStorage.getItem('savedMovies') || '[]');
-  if(saved.find(m=>m.imdbID === movie.imdbID)) return;
-  saved.push(movie);
-  localStorage.setItem('savedMovies', JSON.stringify(saved));
-}
-
-// handle opening detail if user navigated with hash
-function handleHashOpen(){
-  const h = location.hash;
-  if(h && h.startsWith('#detail-')){
-    const id = h.split('-')[1];
-    if(id) openDetail(id);
+  // Recommendations
+  let recs = [];
+  if (movie.Genre) {
+    recs = await fetchMovies(movie.Genre.split(",")[0]);
+    recs = recs.filter(m => m.imdbID !== id).slice(0, 6);
   }
+  renderMovies(recs, similarGrid);
+
+  // Show modal
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+
+  // Make modal scrollable
+  const modalCard = modal.querySelector(".modal-card");
+  modalCard.style.overflowY = "auto";
+  modalCard.style.maxHeight = "90vh";
 }
 
-// small helper
-function escapeHtml(s){ return String(s || '').replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+modalClose.addEventListener("click", () => {
+  modal.classList.add("hidden");
+  document.body.style.overflow = ""; // unlock page scroll
+  const modalCard = modal.querySelector(".modal-card");
+  modalCard.style.overflowY = "";
+});
+
+// =======================
+// EXPLORE GENRES
+// =======================
+if (genreBtns.length) {
+  genreBtns.forEach(btn =>
+    btn.addEventListener("click", () => {
+      const genre = btn.dataset.genre;
+      loadGenre(genre);
+    })
+  );
+}
+
+async function loadGenre(genre) {
+  if (!exploreGrid) return;
+  exploreGrid.innerHTML = `<p>Loading ${genre} movies…</p>`;
+  let results = [];
+  for (let page = 1; page <= 5; page++) {
+    const movies = await fetchMovies(genre, page);
+    results = results.concat(movies);
+  }
+  renderMovies(results, exploreGrid);
+}
+
+// =======================
+// INIT
+// =======================
+document.addEventListener("DOMContentLoaded", () => {
+  // Home slideshow
+  if (slideshow) loadSlideshow();
+
+  // Load initial movie grids
+  if (movieGrid) loadGenre("Action"); // Home grid default
+  if (exploreGrid) loadGenre("Action"); // Explore default
+});
+
+async function loadHomeMovies() {
+  let movies = [];
+  const trendingTitles = ["Avengers", "Batman", "Spider-Man"]; // example trending
+  for (let title of trendingTitles) {
+    const results = await fetchMovies(title);
+    movies = movies.concat(results);
+  }
+  renderMovies(movies, movieGrid); // render to the main grid
+}
+
+loadHomeMovies();

@@ -49,3 +49,11 @@ Search for movies, see posters, ratings, explore by genre, and keep track of you
 ```bash
 git clone https://github.com/BerylKoko/Movie-App.git
 cd Movie-App
+---
+## Future Improvements
+
+ - User login for personal collections
+ - Advanced search filters (by year, rating, genre)
+ - Slideshow carousel with animated transitions
+ - Movie recommendation engine
+ - Subtle particle or background effects for added polish

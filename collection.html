@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Collection — Movie Explorer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <nav class="nav">
+      <div class="brand">Movie Explorer</div>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="explore.html">Explore</a></li>
+        <li><a href="collection.html">Collection</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <h2 class="section-title">My Collection</h2>
+    <div id="collection-grid" class="movie-grid"></div>
+  </main>
+
+  <script>
+  // load saved movies from localStorage and render clickable cards (open index detail)
+  (function(){
+    const saved = JSON.parse(localStorage.getItem('savedMovies') || '[]');
+    const grid = document.getElementById('collection-grid');
+    if(!saved.length) grid.innerHTML = '<p class="no-results">No saved movies yet. Save movies from the search or detail modal.</p>';
+    saved.forEach(movie=>{
+      const card = document.createElement('div');
+      card.className = 'movie-card';
+      card.dataset.imdbid = movie.imdbID;
+      card.innerHTML = `
+        <img src="${movie.Poster && movie.Poster!=='N/A' ? movie.Poster : 'movieposter.jpg'}" alt="${movie.Title}">
+        <div class="info"><h4>${movie.Title}</h4><p>${movie.Year}</p></div>
+      `;
+      card.addEventListener('click', ()=> window.location = `index.html#detail-${movie.imdbID}`);
+      grid.appendChild(card);
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -5,7 +5,7 @@ A full-featured movie tracker and explorer web app built with Flask, HTML, CSS, 
 Search for movies, see posters, ratings, explore by genre, and keep track of your favorite films.
 
 ## Live Demo
-[https://berylkoko.github.io/Movie-App/](https://berylkoko.github.io/Movie-App/)
+[https://berylkoko.github.io/Movie-Tracker/](https://berylkoko.github.io/Movie-Tracker/)
 
 ---
 
